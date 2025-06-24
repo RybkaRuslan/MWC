@@ -1,0 +1,41 @@
+@use '../shared/styles/variables.scss' as *;
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: $secondary;
+
+  &__header {
+    background-color: $background;
+    padding: $spacing-md $spacing-lg;
+    border-bottom: 1px solid $border;
+    box-shadow: $shadow-light;
+  }
+
+  &__logo {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__logo-text {
+    font-size: 24px;
+    font-weight: 700;
+    color: $primary;
+  }
+
+  &__subtitle {
+    font-size: 16px;
+    color: $text-secondary;
+  }
+
+  &__content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: $sidebar-width 1fr 1fr;
+    gap: $spacing-md;
+    padding: $spacing-md;
+    min-height: calc(100vh - 80px); // высота без header
+  }
+}

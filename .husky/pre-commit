@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+# Запускаем lint-staged для автоматической проверки и форматирования
+npx lint-staged
+
+# Проверяем типы TypeScript
+npm run type-check 

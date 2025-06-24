@@ -1,0 +1,126 @@
+@use 'sass:color';
+@use '../../../shared/styles/variables.scss' as *;
+
+.sidebar {
+  background-color: $background;
+  border-radius: $border-radius;
+  box-shadow: $shadow-medium;
+  height: fit-content;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+
+  &__header {
+    padding: $spacing-md $spacing-lg;
+    border-bottom: 1px solid $border;
+    background-color: $primary;
+    border-radius: $border-radius $border-radius 0 0;
+  }
+
+  &__title {
+    color: $background;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  &__content {
+    padding: $spacing-lg;
+  }
+
+  &__section {
+    margin-bottom: $spacing-lg;
+
+    &:last-of-type {
+      margin-bottom: $spacing-md;
+    }
+  }
+
+  &__section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: $text-primary;
+    margin: 0 0 $spacing-md 0;
+    padding-bottom: $spacing-xs;
+    border-bottom: 1px solid $border;
+  }
+
+  &__field {
+    margin-bottom: $spacing-md;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__label {
+    display: block;
+    font-size: 12px;
+    color: $text-secondary;
+    margin-bottom: $spacing-xs;
+    font-weight: 500;
+  }
+
+  &__input,
+  &__select {
+    width: 100%;
+    padding: $spacing-sm;
+    border: 1px solid $border;
+    border-radius: $border-radius-small;
+    font-size: 13px;
+    transition: border-color 0.2s ease;
+
+    &:focus {
+      border-color: $primary;
+      outline: none;
+    }
+
+    &::placeholder {
+      color: $text-muted;
+    }
+  }
+
+  &__select {
+    background-color: $background;
+    cursor: pointer;
+  }
+
+  &__button {
+    width: 100%;
+    background-color: $primary;
+    color: $background;
+    padding: $spacing-md;
+    border: none;
+    border-radius: $border-radius-small;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: color.adjust($primary, $lightness: -10%);
+    }
+
+    &:active {
+      background-color: color.adjust($primary, $lightness: -15%);
+    }
+  }
+
+  // Кастомный скроллбар
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $secondary;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $border;
+    border-radius: 3px;
+
+    &:hover {
+      background: color.adjust($border, $lightness: -20%);
+    }
+  }
+}

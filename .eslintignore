@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.git/
+.vscode/
+.idea/
+coverage/
+*.min.js
+*.min.css
+public/
+*.config.js
+*.config.ts
+vite.config.ts
+*.config.ts 

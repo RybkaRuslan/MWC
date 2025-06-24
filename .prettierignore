@@ -1,0 +1,39 @@
+# Зависимости
+node_modules/
+.pnp
+.pnp.js
+
+# Продакшн сборка
+/dist
+/build
+
+# Кэш
+.cache
+.parcel-cache
+
+# Логи
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Файлы IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Конфигурационные файлы
+package-lock.json
+yarn.lock
+*.min.js
+*.min.css
+
+# Public assets
+public/
+*.svg
+*.ico 

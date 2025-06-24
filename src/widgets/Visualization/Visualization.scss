@@ -1,0 +1,52 @@
+@use '../../shared/styles/variables.scss' as *;
+
+.visualization {
+  background-color: $background;
+  border-radius: $border-radius;
+  box-shadow: $shadow-medium;
+  height: fit-content;
+
+  &__header {
+    padding: $spacing-md $spacing-lg;
+    border-bottom: 1px solid $border;
+    background-color: $primary;
+    border-radius: $border-radius $border-radius 0 0;
+  }
+
+  &__title {
+    color: $background;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  &__content {
+    padding: $spacing-xl;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__placeholder {
+    text-align: center;
+    color: $text-muted;
+  }
+
+  &__icon {
+    font-size: 48px;
+    margin-bottom: $spacing-md;
+  }
+
+  &__text {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: $spacing-xs;
+    color: $text-secondary;
+  }
+
+  &__subtext {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+}
