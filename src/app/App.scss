@@ -34,8 +34,10 @@
     flex: 1;
     display: grid;
     grid-template-columns: $sidebar-width 1fr 1fr;
+    grid-template-rows: 1fr;
     gap: $spacing-md;
     padding: $spacing-md;
     min-height: calc(100vh - 80px); // высота без header
+    align-items: stretch;
   }
 }

@@ -1,30 +1,46 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import './Sidebar.scss'
+import {
+  calculateBoltConnection,
+  parseRUSPANCSV,
+  STEEL_MATERIALS,
+  BOLT_STRENGTH_CLASSES,
+} from '@shared/lib/calculations'
+import { useCalculation } from '@shared/context/CalculationContext'
 
 export const Sidebar = () => {
-  const [formData, setFormData] = useState({
+  const {
+    calculationResult,
+    setCalculationResult,
+    isCalculating,
+    setIsCalculating,
+  } = useCalculation()
+
+  const initialFormData = {
     // Базовые элементы
     baseType: '',
     baseConfiguration: '',
 
     // Расположение болтов
-    boltCount: { x: '', y: '' },
+    boltCount: { x: '5', y: '3' },
 
     // Параметры элементов узла
-    profile: { name: '', steel: '' },
-    fascia: { name: '', steel: '' },
-    boltDiameter: '',
-    proxyCert: '',
+    profile: { name: '2.5', steel: 'С390' },
+    fascia: { name: '12', steel: 'С345' },
+    boltDiameter: '16',
+    proxyCert: '5.6',
 
     // Условия в узле
-    longitudinalForce: '',
-    moment: '',
-    transverseForce: '',
-    forceCoefficient: '',
+    longitudinalForce: '39.6',
+    moment: '1.0',
+    transverseForce: '2.9',
+    forceCoefficient: '0.54',
 
     // Параметры фасонного элемента
-    height: '',
-  })
+    height: '350',
+  }
+
+  const [formData, setFormData] = useState(initialFormData)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -47,9 +63,110 @@ export const Sidebar = () => {
     }))
   }
 
-  const handleCalculate = () => {
-    // console.log('Расчет с данными:', formData)
-    // Здесь будет логика расчета
+  const handleCalculate = async () => {
+    setIsCalculating(true)
+
+    try {
+      // Подготовка входных данных для расчета
+      const calculationInput = {
+        boltRows: {
+          x: parseInt(formData.boltCount.x) || 5,
+          y: parseInt(formData.boltCount.y) || 3,
+        },
+        boltSpacing: {
+          x: [100, 160, 160, 90], // По умолчанию, можно будет сделать настраиваемым
+          y: [250, 150],
+        },
+        profile: {
+          thickness: parseFloat(formData.profile.name) || 2.5,
+          material:
+            STEEL_MATERIALS[formData.profile.steel] || STEEL_MATERIALS['С390'],
+        },
+        plate: {
+          thickness: parseFloat(formData.fascia.name) || 12,
+          material:
+            STEEL_MATERIALS[formData.fascia.steel] || STEEL_MATERIALS['С345'],
+        },
+        bolt: {
+          diameter: parseInt(formData.boltDiameter) || 16,
+          strengthClass:
+            BOLT_STRENGTH_CLASSES[formData.proxyCert] ||
+            BOLT_STRENGTH_CLASSES['5.6'],
+        },
+        forces: {
+          N: parseFloat(formData.longitudinalForce) || 0,
+          M: parseFloat(formData.moment) || 0,
+          Q: parseFloat(formData.transverseForce) || 0,
+        },
+        connectionType: '2S' as const,
+        plateHeight: parseFloat(formData.height) || 350,
+        plateWidth: 250, // По умолчанию
+        utilizationFactor: parseFloat(formData.forceCoefficient) || 0.54,
+      }
+
+      // Выполнение расчета
+      const result = calculateBoltConnection(calculationInput)
+      setCalculationResult(result)
+    } catch (error) {
+      console.error('Ошибка расчета:', error)
+    } finally {
+      setIsCalculating(false)
+    }
+  }
+
+  const handleReset = () => {
+    // Очищаем форму
+    setFormData(initialFormData)
+    // Очищаем результаты расчета
+    setCalculationResult(null)
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file && file.name.endsWith('.csv')) {
+      const reader = new FileReader()
+      reader.onload = e => {
+        const csvContent = e.target?.result as string
+        const parsed = parseRUSPANCSV(csvContent)
+
+        if (parsed.errors.length === 0) {
+          // Заполняем форму данными из CSV
+          const input = parsed.input
+          setFormData({
+            baseType: '',
+            baseConfiguration: '',
+            boltCount: {
+              x: input.boltRows.x.toString(),
+              y: input.boltRows.y.toString(),
+            },
+            profile: {
+              name: input.profile.thickness.toString(),
+              steel: input.profile.material.type,
+            },
+            fascia: {
+              name: input.plate.thickness.toString(),
+              steel: input.plate.material.type,
+            },
+            boltDiameter: input.bolt.diameter.toString(),
+            proxyCert: input.bolt.strengthClass.class,
+            longitudinalForce: input.forces.N.toString(),
+            moment: input.forces.M.toString(),
+            transverseForce: input.forces.Q.toString(),
+            forceCoefficient: input.utilizationFactor.toString(),
+            height: input.plateHeight.toString(),
+          })
+
+          // Автоматически выполняем расчет
+          setTimeout(() => {
+            const result = calculateBoltConnection(input)
+            setCalculationResult(result)
+          }, 100)
+        } else {
+          console.error('Ошибки при парсинге CSV:', parsed.errors)
+        }
+      }
+      reader.readAsText(file)
+    }
   }
 
   return (
@@ -123,7 +240,7 @@ export const Sidebar = () => {
         <div className='sidebar__section'>
           <h3 className='sidebar__section-title'>Параметры элементов узла</h3>
           <div className='sidebar__field'>
-            <label className='sidebar__label'>Профиль</label>
+            <label className='sidebar__label'>Профиль, t мм</label>
             <input
               type='text'
               className='sidebar__input'
@@ -131,7 +248,7 @@ export const Sidebar = () => {
               onChange={e =>
                 handleNestedInputChange('profile', 'name', e.target.value)
               }
-              placeholder='Введите профиль'
+              placeholder='Толщина профиля'
             />
             <select
               className='sidebar__select'
@@ -140,13 +257,15 @@ export const Sidebar = () => {
                 handleNestedInputChange('profile', 'steel', e.target.value)
               }
             >
-              <option value=''>Сталь</option>
-              <option value='steel1'>Сталь 1</option>
-              <option value='steel2'>Сталь 2</option>
+              <option value=''>Выберите сталь</option>
+              <option value='С245'>С245</option>
+              <option value='С345'>С345</option>
+              <option value='С375'>С375</option>
+              <option value='С390'>С390</option>
             </select>
           </div>
           <div className='sidebar__field'>
-            <label className='sidebar__label'>Фасонка</label>
+            <label className='sidebar__label'>Фасонка, t мм</label>
             <input
               type='text'
               className='sidebar__input'
@@ -154,7 +273,7 @@ export const Sidebar = () => {
               onChange={e =>
                 handleNestedInputChange('fascia', 'name', e.target.value)
               }
-              placeholder='Введите фасонку'
+              placeholder='Толщина фасонки'
             />
             <select
               className='sidebar__select'
@@ -163,9 +282,11 @@ export const Sidebar = () => {
                 handleNestedInputChange('fascia', 'steel', e.target.value)
               }
             >
-              <option value=''>Сталь</option>
-              <option value='steel1'>Сталь 1</option>
-              <option value='steel2'>Сталь 2</option>
+              <option value=''>Выберите сталь</option>
+              <option value='С245'>С245</option>
+              <option value='С345'>С345</option>
+              <option value='С375'>С375</option>
+              <option value='С390'>С390</option>
             </select>
           </div>
           <div className='sidebar__field'>
@@ -186,8 +307,10 @@ export const Sidebar = () => {
               onChange={e => handleInputChange('proxyCert', e.target.value)}
             >
               <option value=''>Выберите класс</option>
-              <option value='class1'>Класс 1</option>
-              <option value='class2'>Класс 2</option>
+              <option value='5.6'>5.6</option>
+              <option value='5.8'>5.8</option>
+              <option value='8.8'>8.8</option>
+              <option value='10.9'>10.9</option>
             </select>
           </div>
         </div>
@@ -230,7 +353,7 @@ export const Sidebar = () => {
             />
           </div>
           <div className='sidebar__field'>
-            <label className='sidebar__label'>Nв** = 2,01 тс</label>
+            <label className='sidebar__label'>ku</label>
             <input
               type='number'
               className='sidebar__input'
@@ -238,7 +361,7 @@ export const Sidebar = () => {
               onChange={e =>
                 handleInputChange('forceCoefficient', e.target.value)
               }
-              placeholder='Коэффициент'
+              placeholder='Коэффициент использования'
             />
           </div>
         </div>
@@ -264,10 +387,11 @@ export const Sidebar = () => {
               type='number'
               className='sidebar__input'
               placeholder='Толщина'
+              defaultValue='250'
             />
           </div>
           <div className='sidebar__field'>
-            <label className='sidebar__label'>кт = 0,90</label>
+            <label className='sidebar__label'>кт</label>
             <input
               type='number'
               className='sidebar__input'
@@ -277,10 +401,51 @@ export const Sidebar = () => {
           </div>
         </div>
 
-        {/* Кнопка расчета */}
-        <button className='sidebar__button' onClick={handleCalculate}>
-          Рассчитать
-        </button>
+        {/* Загрузка CSV файла */}
+        <div className='sidebar__section'>
+          <h3 className='sidebar__section-title'>Импорт данных</h3>
+          <div className='sidebar__field'>
+            <label className='sidebar__label'>Загрузить CSV файл</label>
+            <input
+              type='file'
+              accept='.csv'
+              onChange={handleFileUpload}
+              className='sidebar__file-input'
+            />
+          </div>
+        </div>
+
+        {/* Кнопки управления */}
+        <div className='sidebar__actions'>
+          {!calculationResult ? (
+            // Кнопка первичного расчета
+            <button
+              className='sidebar__button'
+              onClick={handleCalculate}
+              disabled={isCalculating}
+            >
+              {isCalculating ? 'Расчет...' : 'Рассчитать'}
+            </button>
+          ) : (
+            // Кнопки после расчета
+            <div className='sidebar__button-group'>
+              <button
+                className='sidebar__button sidebar__button--secondary'
+                onClick={handleReset}
+                disabled={isCalculating}
+              >
+                Сбросить
+              </button>
+              <button
+                className='sidebar__button'
+                onClick={handleCalculate}
+                disabled={isCalculating}
+              >
+                {isCalculating ? 'Расчет...' : 'Пересчитать'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
