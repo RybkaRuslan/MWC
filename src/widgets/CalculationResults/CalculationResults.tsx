@@ -1,5 +1,6 @@
 import './CalculationResults.scss'
 import { useCalculation } from '@shared/context/CalculationContext'
+import { noDataIcon } from '@shared/assets/icons'
 
 export const CalculationResults = () => {
   const { calculationResult, isCalculating } = useCalculation()
@@ -28,10 +29,12 @@ export const CalculationResults = () => {
         </div>
         <div className='calculation-results__content'>
           <div className='calculation-results__placeholder'>
-            <div className='calculation-results__icon'>📊</div>
+            <div className='calculation-results__icon'>
+              <img src={noDataIcon} alt='Нет данных' />
+            </div>
             <p className='calculation-results__text'>Нет данных</p>
             <p className='calculation-results__subtext'>
-              Введите данные и нажмите "Рассчитать"
+              Введите данные, чтобы получить результы расчета
             </p>
           </div>
         </div>

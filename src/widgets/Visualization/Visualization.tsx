@@ -1,4 +1,5 @@
 import './Visualization.scss'
+import { noVisualIcon } from '@shared/assets/icons'
 
 export const Visualization = () => {
   return (
@@ -8,7 +9,9 @@ export const Visualization = () => {
       </div>
       <div className='visualization__content'>
         <div className='visualization__placeholder'>
-          <div className='visualization__icon'>🎯</div>
+          <div className='visualization__icon'>
+            <img src={noVisualIcon} alt='Нет данных' />
+          </div>
           <p className='visualization__text'>Нет данных</p>
           <p className='visualization__subtext'>
             Введите данные, чтобы увидеть визуализацию

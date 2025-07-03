@@ -29,7 +29,7 @@
       "@shared/*": ["./src/shared/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "src/shared/types/images.d.ts"],
   "references": [
     {
       "path": "./tsconfig.node.json"
