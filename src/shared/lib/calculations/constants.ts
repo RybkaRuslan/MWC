@@ -56,9 +56,20 @@ export const BOLT_STRENGTH_CLASSES: Record<string, BoltStrengthClass> = {
   },
 }
 
+// Расчетное сопротивление фасонки Ry в Н/мм² (для определения ku)
+export const PLATE_DESIGN_STRENGTH: Record<string, number> = {
+  С245: 235,
+  С345: 310,
+  С375: 310,
+  С390: 310,
+}
+
+// Ускорение свободного падения, м/с² (перевод тс ↔ Н)
+export const GRAVITY = 9.81
+
 // Площади поперечного сечения болтов (Abn) в см²
 export const BOLT_CROSS_SECTION_AREAS: Record<number, number> = {
-  12: 0.76,
+  12: 0.7594,
   16: 1.57,
   18: 1.92,
   20: 2.45,
@@ -75,11 +86,21 @@ export const SAFETY_FACTORS = {
   gammaM: 1.0, // коэффициент надежности по материалу
 }
 
-// Типы соединений и количество расчетных срезов
+// Типы соединений: количество расчетных срезов, фасонок и соединяемых профилей
 export const CONNECTION_TYPES = {
-  '1S': { name: 'Односрезное', shearPlanes: 1 },
-  '2S': { name: 'Двухсрезное симметричное', shearPlanes: 2 },
-  '2Z': { name: 'Двухсрезное несимметричное', shearPlanes: 2 },
+  '1S': { name: 'Односрезное', shearPlanes: 1, plates: 1, profiles: 1 },
+  '2S': {
+    name: 'Двухсрезное симметричное',
+    shearPlanes: 2,
+    plates: 1,
+    profiles: 2,
+  },
+  '2Z': {
+    name: 'Двухсрезное несимметричное',
+    shearPlanes: 2,
+    plates: 2,
+    profiles: 2,
+  },
 }
 
 // Минимальные расстояния между болтами (мм)

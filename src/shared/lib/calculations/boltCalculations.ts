@@ -10,6 +10,8 @@ import {
   BOLT_CROSS_SECTION_AREAS,
   BEARING_STRENGTH,
   CONNECTION_TYPES,
+  GRAVITY,
+  PLATE_DESIGN_STRENGTH,
   SAFETY_FACTORS,
 } from './constants'
 
@@ -34,7 +36,10 @@ export function calculateBoltConnection(
   // 5. Проверки несущей способности
   const capacityChecks = performCapacityChecks(input, maxBoltForce.value)
 
-  // 6. Формирование итогового результата
+  // 6. Коэффициент использования фасонки
+  const plateUtilization = calculatePlateUtilization(input)
+
+  // 7. Формирование итогового результата
   const summary = generateSummary(capacityChecks)
 
   return {
@@ -43,6 +48,7 @@ export function calculateBoltConnection(
     boltForces,
     maxBoltForce,
     capacityChecks,
+    plateUtilization,
     summary,
   }
 }
@@ -142,34 +148,41 @@ function calculateBoltForces(
   const { centerOfGravity, momentOfInertia, area } = geometry
   const activeBolts = bolts.filter(bolt => bolt.isActive)
 
+  // Полярный момент инерции болтового поля Σr², мм²
+  const polarInertia = momentOfInertia.Ix + momentOfInertia.Iy
+
   return activeBolts.map((bolt, index) => {
     const dx = bolt.x - centerOfGravity.x
     const dy = bolt.y - centerOfGravity.y
 
-    // Усилия от осевой силы N (равномерно распределены)
+    // Усилия от осевой силы N (равномерно распределены, вдоль оси X)
     const fromAxial = {
-      x: 0,
-      y: (-forces.N * 1000) / area, // переводим тс в кг и распределяем
-    }
-
-    // Усилия от момента M
-    const M_Nmm = forces.M * 1000 * 1000 // переводим тс*м в кг*мм
-    const fromMoment = {
-      x: -(M_Nmm * dy) / momentOfInertia.Iy,
-      y: (M_Nmm * dx) / momentOfInertia.Ix,
-    }
-
-    // Усилия от поперечной силы Q (равномерно распределены)
-    const fromShear = {
-      x: (-forces.Q * 1000) / area, // переводим тс в кг
+      x: -forces.N / area,
       y: 0,
+    }
+
+    // Усилия от момента M: Nm = M·r / Σr², перпендикулярно радиусу (M в тс·м → тс·мм)
+    const M_tmm = forces.M * 1000
+    const fromMoment =
+      polarInertia > 0
+        ? {
+            x: (-M_tmm * dy) / polarInertia,
+            y: (M_tmm * dx) / polarInertia,
+          }
+        : { x: 0, y: 0 }
+
+    // Усилия от поперечной силы Q (равномерно распределены, вдоль оси Y)
+    const fromShear = {
+      x: 0,
+      y: -forces.Q / area,
     }
 
     // Результирующая
     const resultantX = fromAxial.x + fromMoment.x + fromShear.x
     const resultantY = fromAxial.y + fromMoment.y + fromShear.y
-    const magnitude =
-      Math.sqrt(resultantX * resultantX + resultantY * resultantY) / 1000 // обратно в тс
+    const magnitude = Math.sqrt(
+      resultantX * resultantX + resultantY * resultantY,
+    )
 
     return {
       index,
@@ -217,16 +230,19 @@ function performCapacityChecks(
   maxBoltForce: number,
 ): CapacityCheck[] {
   const checks: CapacityCheck[] = []
+  const { shearPlanes, plates, profiles } =
+    CONNECTION_TYPES[input.connectionType]
+  const gamma = SAFETY_FACTORS.gammaC * SAFETY_FACTORS.gammaB
+  const newtonsToTf = 1 / (GRAVITY * 1000)
 
-  // 1. Проверка на срез болтов
+  // 1. Проверка на срез болтов: Nbs = Rbs·Abn·ns·γc·γb
   const boltArea = BOLT_CROSS_SECTION_AREAS[input.bolt.diameter] || 0
-  const shearPlanes = CONNECTION_TYPES[input.connectionType].shearPlanes
   const shearCapacity =
-    (input.bolt.strengthClass.shearStrength *
-      boltArea *
-      shearPlanes *
-      SAFETY_FACTORS.gammaB) /
-    100 // тс
+    input.bolt.strengthClass.shearStrength *
+    newtonsToTf *
+    (boltArea * 100) *
+    shearPlanes *
+    gamma
 
   checks.push({
     type: 'shear',
@@ -236,13 +252,13 @@ function performCapacityChecks(
     isAcceptable: maxBoltForce <= shearCapacity,
   })
 
-  // 2. Проверка на смятие профиля
+  // 2. Проверка на смятие профиля: Nbp = Rbp·d·Σt·γc·γb
   const profileBearingCapacity =
-    (BEARING_STRENGTH[input.profile.material.type] *
-      input.bolt.diameter *
-      input.profile.thickness *
-      SAFETY_FACTORS.gammaC) /
-    100000 // тс
+    BEARING_STRENGTH[input.profile.material.type] *
+    newtonsToTf *
+    input.bolt.diameter *
+    (input.profile.thickness * profiles) *
+    gamma
 
   checks.push({
     type: 'bearing-profile',
@@ -254,11 +270,11 @@ function performCapacityChecks(
 
   // 3. Проверка на смятие фасонки
   const plateBearingCapacity =
-    (BEARING_STRENGTH[input.plate.material.type] *
-      input.bolt.diameter *
-      input.plate.thickness *
-      SAFETY_FACTORS.gammaC) /
-    100000 // тс
+    BEARING_STRENGTH[input.plate.material.type] *
+    newtonsToTf *
+    input.bolt.diameter *
+    (input.plate.thickness * plates) *
+    gamma
 
   checks.push({
     type: 'bearing-plate',
@@ -269,6 +285,44 @@ function performCapacityChecks(
   })
 
   return checks
+}
+
+/**
+ * Коэффициент использования фасонки ku = (M/Wx + N/A) / (Ry·γc)
+ * Сечение фасонки за вычетом отверстий под болты: две полки у краев и стенка между крайними рядами
+ */
+function calculatePlateUtilization(input: CalculationInput): number {
+  const h = input.plateHeight
+  const h1 = input.boltSpacing.y[0] ?? 0
+  const holeWidth = input.bolt.diameter + 2
+  const width =
+    input.plate.thickness * CONNECTION_TYPES[input.connectionType].plates
+
+  const flangeHeight = (h - h1 - holeWidth) / 2
+  const flangeOffset = h / 2 - flangeHeight / 2
+  const webHeight = h1 - holeWidth
+
+  const parts = [
+    { height: flangeHeight, offset: flangeOffset },
+    { height: webHeight, offset: 0 },
+    { height: flangeHeight, offset: -flangeOffset },
+  ]
+
+  let area = 0
+  let inertia = 0
+  for (const { height, offset } of parts) {
+    const partArea = width * height
+    area += partArea
+    inertia += (width * height ** 3) / 12 + offset * offset * partArea
+  }
+
+  const sectionModulus = inertia / (h / 2)
+  const N = input.forces.N * GRAVITY * 1000 // Н
+  const M = input.forces.M * GRAVITY * 1e6 // Н·мм
+  const stress = M / sectionModulus + N / area
+  const Ry = PLATE_DESIGN_STRENGTH[input.plate.material.type] ?? 310
+
+  return stress / (Ry * SAFETY_FACTORS.gammaC)
 }
 
 /**

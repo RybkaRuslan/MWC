@@ -57,7 +57,6 @@ interface FormState {
   boltDiameter: string
   strengthClass: string
   forces: { N: string; M: string; Q: string }
-  utilizationFactor: string
   plateHeight: string
 }
 
@@ -72,7 +71,6 @@ const INITIAL_FORM: FormState = {
   boltDiameter: '16',
   strengthClass: '5.6',
   forces: { N: '39.6', M: '1.0', Q: '2.9' },
-  utilizationFactor: '0.54',
   plateHeight: '350',
 }
 
@@ -105,7 +103,6 @@ const inputToForm = (input: CalculationInput): FormState => ({
     M: String(input.forces.M),
     Q: String(input.forces.Q),
   },
-  utilizationFactor: String(input.utilizationFactor),
   plateHeight: String(input.plateHeight),
 })
 
@@ -136,7 +133,6 @@ const formToInput = (form: FormState): CalculationInput => ({
   connectionType: '2S',
   plateHeight: parseNumber(form.plateHeight, 350),
   plateWidth: 250,
-  utilizationFactor: parseNumber(form.utilizationFactor, 0.54),
 })
 
 const Section = ({
@@ -435,14 +431,6 @@ export const Sidebar = () => {
               onChange={e => updateNested('forces', 'Q', e.target.value)}
             />
           </Row>
-          <Row label='ku'>
-            <Input
-              inputMode='decimal'
-              placeholder='Введите'
-              value={form.utilizationFactor}
-              onChange={e => update('utilizationFactor', e.target.value)}
-            />
-          </Row>
           <p className='sidebar__formula'>
             N<sub>b</sub>
             <sup>max</sup> ={' '}
@@ -461,6 +449,12 @@ export const Sidebar = () => {
               onChange={e => update('plateHeight', e.target.value)}
             />
           </Row>
+          <p className='sidebar__formula'>
+            k<sub>u</sub> ={' '}
+            {calculationResult
+              ? formatNumber(calculationResult.plateUtilization, 3)
+              : '—'}
+          </p>
         </Section>
 
         <Section title='Импорт данных'>

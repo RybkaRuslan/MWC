@@ -56,17 +56,16 @@ export interface CalculationInput {
   connectionType: '1S' | '2S' | '2Z' // тип соединения
   plateHeight: number // мм
   plateWidth: number // мм
-  utilizationFactor: number // коэффициент использования ku
 }
 
 export interface BoltForces {
   index: number
   coordinates: BoltCoordinates
   forces: {
-    fromAxial: { x: number; y: number } // от осевой силы N
-    fromMoment: { x: number; y: number } // от момента M
-    fromShear: { x: number; y: number } // от поперечной силы Q
-    resultant: { x: number; y: number; magnitude: number } // результирующая
+    fromAxial: { x: number; y: number } // от осевой силы N, тс
+    fromMoment: { x: number; y: number } // от момента M, тс
+    fromShear: { x: number; y: number } // от поперечной силы Q, тс
+    resultant: { x: number; y: number; magnitude: number } // результирующая, тс
   }
 }
 
@@ -95,6 +94,7 @@ export interface CalculationResult {
     coordinates: BoltCoordinates
   }
   capacityChecks: CapacityCheck[]
+  plateUtilization: number // коэффициент использования фасонки ku
   summary: {
     isAcceptable: boolean
     criticalCheck: CapacityCheck

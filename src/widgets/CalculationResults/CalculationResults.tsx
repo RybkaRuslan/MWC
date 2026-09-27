@@ -95,6 +95,7 @@ export const CalculationResults = () => {
     const findCheck = (type: CapacityCheck['type']) =>
       capacityChecks.find(check => check.type === type)
     const { bolt, profile, plate } = input
+    const connection = CONNECTION_TYPES[input.connectionType]
     const boltName = `М${bolt.diameter}, класс ${bolt.strengthClass.class}`
 
     return (
@@ -160,10 +161,13 @@ export const CalculationResults = () => {
             },
             {
               label: 'Число расчетных срезов одного болта',
-              value: CONNECTION_TYPES[input.connectionType].shearPlanes,
+              value: connection.shearPlanes,
             },
-            { label: 'Количество фасонок', value: 1 },
-            { label: 'Количество соединяемых профилей', value: 2 },
+            { label: 'Количество фасонок', value: connection.plates },
+            {
+              label: 'Количество соединяемых профилей',
+              value: connection.profiles,
+            },
           ]}
         />
         {!summary.isAcceptable && summary.recommendations?.length ? (

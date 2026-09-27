@@ -136,13 +136,6 @@ function extractCalculationInput(data: string[][]): CalculationInput {
         params.plateWidth = parseFloat(widthMatch.replace(',', '.'))
       }
     }
-
-    if (row.some(cell => cell.includes('ku ='))) {
-      const kuMatch = findValueInRow(row, 'ku =')
-      if (kuMatch) {
-        params.utilizationFactor = parseFloat(kuMatch.replace(',', '.'))
-      }
-    }
   }
 
   // Поиск расстояний между болтами
@@ -175,7 +168,6 @@ function extractCalculationInput(data: string[][]): CalculationInput {
     connectionType: '2S', // по умолчанию двухстороннее
     plateHeight: params.plateHeight || 350,
     plateWidth: params.plateWidth || 250,
-    utilizationFactor: params.utilizationFactor || 0.54,
   }
 }
 
@@ -279,6 +271,5 @@ function createDefaultInput(): CalculationInput {
     connectionType: '2S',
     plateHeight: 350,
     plateWidth: 250,
-    utilizationFactor: 0.54,
   }
 }
