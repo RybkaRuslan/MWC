@@ -1,12 +1,177 @@
-import React, { useState } from 'react'
+import { ChangeEvent, ReactNode, useState } from 'react'
+import classNames from 'classnames'
 import './Sidebar.scss'
 import {
   calculateBoltConnection,
   parseRUSPANCSV,
-  STEEL_MATERIALS,
+  BOLT_CROSS_SECTION_AREAS,
   BOLT_STRENGTH_CLASSES,
+  CalculationInput,
+  STEEL_MATERIALS,
 } from '@shared/lib/calculations'
+import { formatNumber, parseNumber } from '@shared/lib/format'
 import { useCalculation } from '@shared/context/CalculationContext'
+import { logoIcon } from '@shared/assets/icons'
+import { Button, Input, Select, SelectOption, Stepper } from '@shared/ui'
+
+const MIN_ROWS = 1
+const MAX_ROWS = 10
+const DEFAULT_SPACING = '100'
+
+const toOptions = (values: string[], suffix = ''): SelectOption[] =>
+  values.map(value => ({ value, label: `${value}${suffix}` }))
+
+const CALCULATION_TYPE_OPTIONS: SelectOption[] = [
+  { value: 'column-base', label: 'База колонны' },
+]
+const PROFILE_THICKNESS_OPTIONS = toOptions([
+  '1.5',
+  '2',
+  '2.5',
+  '3',
+  '3.5',
+  '4',
+])
+const PLATE_THICKNESS_OPTIONS = toOptions([
+  '6',
+  '8',
+  '10',
+  '12',
+  '14',
+  '16',
+  '20',
+])
+const STEEL_OPTIONS = toOptions(Object.keys(STEEL_MATERIALS))
+const BOLT_DIAMETER_OPTIONS = Object.keys(BOLT_CROSS_SECTION_AREAS).map(d => ({
+  value: d,
+  label: `М${d}`,
+}))
+const STRENGTH_CLASS_OPTIONS = toOptions(Object.keys(BOLT_STRENGTH_CLASSES))
+
+interface FormState {
+  calculationType: string
+  boltRows: { x: number; y: number }
+  boltSpacing: { x: string[]; y: string[] }
+  profile: { thickness: string; steel: string }
+  plate: { thickness: string; steel: string }
+  boltDiameter: string
+  strengthClass: string
+  forces: { N: string; M: string; Q: string }
+  utilizationFactor: string
+  plateHeight: string
+}
+
+type Axis = 'x' | 'y'
+
+const INITIAL_FORM: FormState = {
+  calculationType: 'column-base',
+  boltRows: { x: 5, y: 3 },
+  boltSpacing: { x: ['100', '160', '160', '90'], y: ['250', '150'] },
+  profile: { thickness: '2.5', steel: 'С390' },
+  plate: { thickness: '12', steel: 'С345' },
+  boltDiameter: '16',
+  strengthClass: '5.6',
+  forces: { N: '39.6', M: '1.0', Q: '2.9' },
+  utilizationFactor: '0.54',
+  plateHeight: '350',
+}
+
+const resizeSpacing = (values: string[], rows: number) => {
+  const count = Math.max(rows - 1, 0)
+  if (values.length >= count) return values.slice(0, count)
+  const fill = values[values.length - 1] ?? DEFAULT_SPACING
+  return [...values, ...Array(count - values.length).fill(fill)]
+}
+
+const inputToForm = (input: CalculationInput): FormState => ({
+  calculationType: 'column-base',
+  boltRows: { ...input.boltRows },
+  boltSpacing: {
+    x: resizeSpacing(input.boltSpacing.x.map(String), input.boltRows.x),
+    y: resizeSpacing(input.boltSpacing.y.map(String), input.boltRows.y),
+  },
+  profile: {
+    thickness: String(input.profile.thickness),
+    steel: input.profile.material.type,
+  },
+  plate: {
+    thickness: String(input.plate.thickness),
+    steel: input.plate.material.type,
+  },
+  boltDiameter: String(input.bolt.diameter),
+  strengthClass: input.bolt.strengthClass.class,
+  forces: {
+    N: String(input.forces.N),
+    M: String(input.forces.M),
+    Q: String(input.forces.Q),
+  },
+  utilizationFactor: String(input.utilizationFactor),
+  plateHeight: String(input.plateHeight),
+})
+
+const formToInput = (form: FormState): CalculationInput => ({
+  boltRows: form.boltRows,
+  boltSpacing: {
+    x: form.boltSpacing.x.map(v => parseNumber(v, 0)),
+    y: form.boltSpacing.y.map(v => parseNumber(v, 0)),
+  },
+  profile: {
+    thickness: parseNumber(form.profile.thickness, 2.5),
+    material: STEEL_MATERIALS[form.profile.steel] ?? STEEL_MATERIALS['С390'],
+  },
+  plate: {
+    thickness: parseNumber(form.plate.thickness, 12),
+    material: STEEL_MATERIALS[form.plate.steel] ?? STEEL_MATERIALS['С345'],
+  },
+  bolt: {
+    diameter: parseNumber(form.boltDiameter, 16),
+    strengthClass:
+      BOLT_STRENGTH_CLASSES[form.strengthClass] ?? BOLT_STRENGTH_CLASSES['5.6'],
+  },
+  forces: {
+    N: parseNumber(form.forces.N, 0),
+    M: parseNumber(form.forces.M, 0),
+    Q: parseNumber(form.forces.Q, 0),
+  },
+  connectionType: '2S',
+  plateHeight: parseNumber(form.plateHeight, 350),
+  plateWidth: 250,
+  utilizationFactor: parseNumber(form.utilizationFactor, 0.54),
+})
+
+const Section = ({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) => (
+  <section className='sidebar__section'>
+    <h3 className='sidebar__section-title'>{title}</h3>
+    <div className='sidebar__card'>{children}</div>
+  </section>
+)
+
+const Row = ({
+  label,
+  muted,
+  children,
+}: {
+  label: ReactNode
+  muted?: boolean
+  children: ReactNode
+}) => (
+  <label className='sidebar__row'>
+    <span
+      className={classNames('sidebar__label', {
+        'sidebar__label--muted': muted,
+      })}
+    >
+      {label}
+    </span>
+    <span className='sidebar__control'>{children}</span>
+  </label>
+)
 
 export const Sidebar = () => {
   const {
@@ -16,97 +181,45 @@ export const Sidebar = () => {
     setIsCalculating,
   } = useCalculation()
 
-  const initialFormData = {
-    // Базовые элементы
-    baseType: '',
-    baseConfiguration: '',
+  const [form, setForm] = useState<FormState>(INITIAL_FORM)
+  const [isSpacingOpen, setIsSpacingOpen] = useState(true)
+  const [importMessage, setImportMessage] = useState<{
+    text: string
+    isError: boolean
+  } | null>(null)
 
-    // Расположение болтов
-    boltCount: { x: '5', y: '3' },
+  const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm(prev => ({ ...prev, [key]: value }))
 
-    // Параметры элементов узла
-    profile: { name: '2.5', steel: 'С390' },
-    fascia: { name: '12', steel: 'С345' },
-    boltDiameter: '16',
-    proxyCert: '5.6',
-
-    // Условия в узле
-    longitudinalForce: '39.6',
-    moment: '1.0',
-    transverseForce: '2.9',
-    forceCoefficient: '0.54',
-
-    // Параметры фасонного элемента
-    height: '350',
-  }
-
-  const [formData, setFormData] = useState(initialFormData)
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
-
-  const handleNestedInputChange = (
-    parent: string,
-    field: string,
+  const updateNested = <K extends 'profile' | 'plate' | 'forces'>(
+    key: K,
+    field: keyof FormState[K],
     value: string,
-  ) => {
-    setFormData(prev => ({
+  ) => setForm(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
+
+  const changeRows = (axis: Axis, rows: number) =>
+    setForm(prev => ({
       ...prev,
-      [parent]: {
-        ...(prev[parent as keyof typeof prev] as object),
-        [field]: value,
+      boltRows: { ...prev.boltRows, [axis]: rows },
+      boltSpacing: {
+        ...prev.boltSpacing,
+        [axis]: resizeSpacing(prev.boltSpacing[axis], rows),
       },
     }))
-  }
 
-  const handleCalculate = async () => {
+  const changeSpacing = (axis: Axis, index: number, value: string) =>
+    setForm(prev => ({
+      ...prev,
+      boltSpacing: {
+        ...prev.boltSpacing,
+        [axis]: prev.boltSpacing[axis].map((v, i) => (i === index ? value : v)),
+      },
+    }))
+
+  const runCalculation = (input: CalculationInput) => {
     setIsCalculating(true)
-
     try {
-      // Подготовка входных данных для расчета
-      const calculationInput = {
-        boltRows: {
-          x: parseInt(formData.boltCount.x) || 5,
-          y: parseInt(formData.boltCount.y) || 3,
-        },
-        boltSpacing: {
-          x: [100, 160, 160, 90], // По умолчанию, можно будет сделать настраиваемым
-          y: [250, 150],
-        },
-        profile: {
-          thickness: parseFloat(formData.profile.name) || 2.5,
-          material:
-            STEEL_MATERIALS[formData.profile.steel] || STEEL_MATERIALS['С390'],
-        },
-        plate: {
-          thickness: parseFloat(formData.fascia.name) || 12,
-          material:
-            STEEL_MATERIALS[formData.fascia.steel] || STEEL_MATERIALS['С345'],
-        },
-        bolt: {
-          diameter: parseInt(formData.boltDiameter) || 16,
-          strengthClass:
-            BOLT_STRENGTH_CLASSES[formData.proxyCert] ||
-            BOLT_STRENGTH_CLASSES['5.6'],
-        },
-        forces: {
-          N: parseFloat(formData.longitudinalForce) || 0,
-          M: parseFloat(formData.moment) || 0,
-          Q: parseFloat(formData.transverseForce) || 0,
-        },
-        connectionType: '2S' as const,
-        plateHeight: parseFloat(formData.height) || 350,
-        plateWidth: 250, // По умолчанию
-        utilizationFactor: parseFloat(formData.forceCoefficient) || 0.54,
-      }
-
-      // Выполнение расчета
-      const result = calculateBoltConnection(calculationInput)
-      setCalculationResult(result)
+      setCalculationResult(calculateBoltConnection(input))
     } catch (error) {
       console.error('Ошибка расчета:', error)
     } finally {
@@ -115,338 +228,294 @@ export const Sidebar = () => {
   }
 
   const handleReset = () => {
-    // Очищаем форму
-    setFormData(initialFormData)
-    // Очищаем результаты расчета
+    setForm(INITIAL_FORM)
+    setImportMessage(null)
     setCalculationResult(null)
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file && file.name.endsWith('.csv')) {
-      const reader = new FileReader()
-      reader.onload = e => {
-        const csvContent = e.target?.result as string
-        const parsed = parseRUSPANCSV(csvContent)
+    event.target.value = ''
+    if (!file) return
 
-        if (parsed.errors.length === 0) {
-          // Заполняем форму данными из CSV
-          const input = parsed.input
-          setFormData({
-            baseType: '',
-            baseConfiguration: '',
-            boltCount: {
-              x: input.boltRows.x.toString(),
-              y: input.boltRows.y.toString(),
-            },
-            profile: {
-              name: input.profile.thickness.toString(),
-              steel: input.profile.material.type,
-            },
-            fascia: {
-              name: input.plate.thickness.toString(),
-              steel: input.plate.material.type,
-            },
-            boltDiameter: input.bolt.diameter.toString(),
-            proxyCert: input.bolt.strengthClass.class,
-            longitudinalForce: input.forces.N.toString(),
-            moment: input.forces.M.toString(),
-            transverseForce: input.forces.Q.toString(),
-            forceCoefficient: input.utilizationFactor.toString(),
-            height: input.plateHeight.toString(),
-          })
-
-          // Автоматически выполняем расчет
-          setTimeout(() => {
-            const result = calculateBoltConnection(input)
-            setCalculationResult(result)
-          }, 100)
-        } else {
-          console.error('Ошибки при парсинге CSV:', parsed.errors)
-        }
-      }
-      reader.readAsText(file)
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setImportMessage({
+        text: 'Поддерживаются только CSV-файлы',
+        isError: true,
+      })
+      return
     }
+
+    const reader = new FileReader()
+    reader.onload = e => {
+      const parsed = parseRUSPANCSV(e.target?.result as string)
+      if (parsed.errors.length > 0) {
+        console.error('Ошибки при парсинге CSV:', parsed.errors)
+        setImportMessage({ text: 'Не удалось прочитать файл', isError: true })
+        return
+      }
+      setForm(inputToForm(parsed.input))
+      setImportMessage({ text: `Загружено: ${file.name}`, isError: false })
+      runCalculation(parsed.input)
+    }
+    reader.readAsText(file)
+  }
+
+  const spacingRows = Math.max(
+    form.boltSpacing.x.length,
+    form.boltSpacing.y.length,
+  )
+
+  const renderSpacingCell = (axis: Axis, index: number) => {
+    const value = form.boltSpacing[axis][index]
+    if (value === undefined) return <span className='sidebar__spacing-cell' />
+    const name = `${axis.toUpperCase()}${index + 1}`
+    return (
+      <label className='sidebar__spacing-cell'>
+        <span className='sidebar__spacing-label'>{name}</span>
+        <Input
+          inputMode='decimal'
+          value={value}
+          onChange={e => changeSpacing(axis, index, e.target.value)}
+          aria-label={`Расстояние ${name}, мм`}
+        />
+      </label>
+    )
   }
 
   return (
-    <div className='sidebar'>
-      <div className='sidebar__header'>
-        <h2 className='sidebar__title'>Калькулятор</h2>
-      </div>
+    <div className='sidebar panel'>
+      <header className='panel__header sidebar__header'>
+        <img src={logoIcon} alt='RUSPAN' className='sidebar__logo' />
+        <span className='panel__title'>Калькулятор</span>
+      </header>
 
-      <div className='sidebar__content'>
-        {/* Блок 1: Вид расчета */}
-        <div className='sidebar__section'>
+      <div className='sidebar__content scrollable'>
+        <section className='sidebar__section'>
           <h3 className='sidebar__section-title'>Вид расчета</h3>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>База основы</label>
-            <select
-              className='sidebar__select'
-              value={formData.baseType}
-              onChange={e => handleInputChange('baseType', e.target.value)}
-            >
-              <option value=''>Выберите...</option>
-              <option value='type1'>Тип 1</option>
-              <option value='type2'>Тип 2</option>
-            </select>
-          </div>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>Расположение болтов</label>
-            <select
-              className='sidebar__select'
-              value={formData.baseConfiguration}
-              onChange={e =>
-                handleInputChange('baseConfiguration', e.target.value)
-              }
-            >
-              <option value=''>Выберите...</option>
-              <option value='config1'>Конфигурация 1</option>
-              <option value='config2'>Конфигурация 2</option>
-            </select>
-          </div>
-        </div>
+          <Select
+            options={CALCULATION_TYPE_OPTIONS}
+            value={form.calculationType}
+            onChange={e => update('calculationType', e.target.value)}
+          />
+        </section>
 
-        {/* Блок 2: Количество рядов по оси X и Y */}
-        <div className='sidebar__section'>
-          <h3 className='sidebar__section-title'>Параметры элементов узла</h3>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>Количество рядов по оси X</label>
-            <input
-              type='number'
-              className='sidebar__input'
-              value={formData.boltCount.x}
-              onChange={e =>
-                handleNestedInputChange('boltCount', 'x', e.target.value)
-              }
-              placeholder='Введите количество'
+        <Section title='Расположение болтов'>
+          <div className='sidebar__row'>
+            <span className='sidebar__label sidebar__label--wide'>
+              Количество рядов по оси X
+            </span>
+            <Stepper
+              label='Количество рядов по оси X'
+              value={form.boltRows.x}
+              min={MIN_ROWS}
+              max={MAX_ROWS}
+              onChange={rows => changeRows('x', rows)}
             />
           </div>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>Количество рядов по оси Y</label>
-            <input
-              type='number'
-              className='sidebar__input'
-              value={formData.boltCount.y}
-              onChange={e =>
-                handleNestedInputChange('boltCount', 'y', e.target.value)
-              }
-              placeholder='Введите количество'
+          <div className='sidebar__row'>
+            <span className='sidebar__label sidebar__label--wide'>
+              Количество рядов по оси Y
+            </span>
+            <Stepper
+              label='Количество рядов по оси Y'
+              value={form.boltRows.y}
+              min={MIN_ROWS}
+              max={MAX_ROWS}
+              onChange={rows => changeRows('y', rows)}
             />
           </div>
-        </div>
 
-        {/* Блок 3: Параметры элементов узла */}
-        <div className='sidebar__section'>
-          <h3 className='sidebar__section-title'>Параметры элементов узла</h3>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>Профиль, t мм</label>
-            <input
-              type='text'
-              className='sidebar__input'
-              value={formData.profile.name}
-              onChange={e =>
-                handleNestedInputChange('profile', 'name', e.target.value)
-              }
-              placeholder='Толщина профиля'
-            />
-            <select
-              className='sidebar__select'
-              value={formData.profile.steel}
-              onChange={e =>
-                handleNestedInputChange('profile', 'steel', e.target.value)
-              }
-            >
-              <option value=''>Выберите сталь</option>
-              <option value='С245'>С245</option>
-              <option value='С345'>С345</option>
-              <option value='С375'>С375</option>
-              <option value='С390'>С390</option>
-            </select>
-          </div>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>Фасонка, t мм</label>
-            <input
-              type='text'
-              className='sidebar__input'
-              value={formData.fascia.name}
-              onChange={e =>
-                handleNestedInputChange('fascia', 'name', e.target.value)
-              }
-              placeholder='Толщина фасонки'
-            />
-            <select
-              className='sidebar__select'
-              value={formData.fascia.steel}
-              onChange={e =>
-                handleNestedInputChange('fascia', 'steel', e.target.value)
-              }
-            >
-              <option value=''>Выберите сталь</option>
-              <option value='С245'>С245</option>
-              <option value='С345'>С345</option>
-              <option value='С375'>С375</option>
-              <option value='С390'>С390</option>
-            </select>
-          </div>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>Болт, d</label>
-            <input
-              type='number'
-              className='sidebar__input'
-              value={formData.boltDiameter}
-              onChange={e => handleInputChange('boltDiameter', e.target.value)}
-              placeholder='Диаметр болта'
-            />
-          </div>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>Класс прочности</label>
-            <select
-              className='sidebar__select'
-              value={formData.proxyCert}
-              onChange={e => handleInputChange('proxyCert', e.target.value)}
-            >
-              <option value=''>Выберите класс</option>
-              <option value='5.6'>5.6</option>
-              <option value='5.8'>5.8</option>
-              <option value='8.8'>8.8</option>
-              <option value='10.9'>10.9</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Блок 4: Условия в узле */}
-        <div className='sidebar__section'>
-          <h3 className='sidebar__section-title'>Условия в узле</h3>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>N, тс</label>
-            <input
-              type='number'
-              className='sidebar__input'
-              value={formData.longitudinalForce}
-              onChange={e =>
-                handleInputChange('longitudinalForce', e.target.value)
-              }
-              placeholder='Продольная сила'
-            />
-          </div>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>M, тс*м</label>
-            <input
-              type='number'
-              className='sidebar__input'
-              value={formData.moment}
-              onChange={e => handleInputChange('moment', e.target.value)}
-              placeholder='Момент'
-            />
-          </div>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>Q, тс</label>
-            <input
-              type='number'
-              className='sidebar__input'
-              value={formData.transverseForce}
-              onChange={e =>
-                handleInputChange('transverseForce', e.target.value)
-              }
-              placeholder='Поперечная сила'
-            />
-          </div>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>ku</label>
-            <input
-              type='number'
-              className='sidebar__input'
-              value={formData.forceCoefficient}
-              onChange={e =>
-                handleInputChange('forceCoefficient', e.target.value)
-              }
-              placeholder='Коэффициент использования'
-            />
-          </div>
-        </div>
-
-        {/* Блок 5: Параметры фасонного элемента */}
-        <div className='sidebar__section'>
-          <h3 className='sidebar__section-title'>
-            Параметры фасонного элемента
-          </h3>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>h, мм</label>
-            <input
-              type='number'
-              className='sidebar__input'
-              value={formData.height}
-              onChange={e => handleInputChange('height', e.target.value)}
-              placeholder='Высота'
-            />
-          </div>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>hт, мм</label>
-            <input
-              type='number'
-              className='sidebar__input'
-              placeholder='Толщина'
-              defaultValue='250'
-            />
-          </div>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>кт</label>
-            <input
-              type='number'
-              className='sidebar__input'
-              placeholder='Коэффициент'
-              defaultValue='0.90'
-            />
-          </div>
-        </div>
-
-        {/* Загрузка CSV файла */}
-        <div className='sidebar__section'>
-          <h3 className='sidebar__section-title'>Импорт данных</h3>
-          <div className='sidebar__field'>
-            <label className='sidebar__label'>Загрузить CSV файл</label>
-            <input
-              type='file'
-              accept='.csv'
-              onChange={handleFileUpload}
-              className='sidebar__file-input'
-            />
-          </div>
-        </div>
-
-        {/* Кнопки управления */}
-        <div className='sidebar__actions'>
-          {!calculationResult ? (
-            // Кнопка первичного расчета
-            <button
-              className='sidebar__button'
-              onClick={handleCalculate}
-              disabled={isCalculating}
-            >
-              {isCalculating ? 'Расчет...' : 'Рассчитать'}
-            </button>
-          ) : (
-            // Кнопки после расчета
-            <div className='sidebar__button-group'>
+          {spacingRows > 0 && (
+            <div className='sidebar__group'>
               <button
-                className='sidebar__button sidebar__button--secondary'
-                onClick={handleReset}
-                disabled={isCalculating}
+                type='button'
+                className={classNames('sidebar__collapse', {
+                  'sidebar__collapse--open': isSpacingOpen,
+                })}
+                onClick={() => setIsSpacingOpen(open => !open)}
+                aria-expanded={isSpacingOpen}
               >
-                Сбросить
+                Расстояние между болтами, мм
+                <svg width='12' height='12' viewBox='0 0 12 12' aria-hidden>
+                  <path d='M2 4.5l4 4 4-4' />
+                </svg>
               </button>
-              <button
-                className='sidebar__button'
-                onClick={handleCalculate}
-                disabled={isCalculating}
-              >
-                {isCalculating ? 'Расчет...' : 'Пересчитать'}
-              </button>
+              {isSpacingOpen && (
+                <div className='sidebar__spacing'>
+                  {Array.from({ length: spacingRows }, (_, index) => (
+                    <div className='sidebar__spacing-row' key={index}>
+                      {renderSpacingCell('x', index)}
+                      {renderSpacingCell('y', index)}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </Section>
+
+        <Section title='Параметры элементов узла'>
+          <div className='sidebar__group'>
+            <span className='sidebar__group-title'>Профиль</span>
+            <Row label='t, мм' muted>
+              <Select
+                options={PROFILE_THICKNESS_OPTIONS}
+                value={form.profile.thickness}
+                onChange={e =>
+                  updateNested('profile', 'thickness', e.target.value)
+                }
+              />
+            </Row>
+            <Row label='Сталь' muted>
+              <Select
+                options={STEEL_OPTIONS}
+                value={form.profile.steel}
+                onChange={e => updateNested('profile', 'steel', e.target.value)}
+              />
+            </Row>
+          </div>
+          <div className='sidebar__group'>
+            <span className='sidebar__group-title'>Фасонка</span>
+            <Row label='t, мм' muted>
+              <Select
+                options={PLATE_THICKNESS_OPTIONS}
+                value={form.plate.thickness}
+                onChange={e =>
+                  updateNested('plate', 'thickness', e.target.value)
+                }
+              />
+            </Row>
+            <Row label='Сталь' muted>
+              <Select
+                options={STEEL_OPTIONS}
+                value={form.plate.steel}
+                onChange={e => updateNested('plate', 'steel', e.target.value)}
+              />
+            </Row>
+          </div>
+          <Row label='Болты, d'>
+            <Select
+              options={BOLT_DIAMETER_OPTIONS}
+              value={form.boltDiameter}
+              onChange={e => update('boltDiameter', e.target.value)}
+            />
+          </Row>
+          <Row label='Класс прочности'>
+            <Select
+              options={STRENGTH_CLASS_OPTIONS}
+              value={form.strengthClass}
+              onChange={e => update('strengthClass', e.target.value)}
+            />
+          </Row>
+        </Section>
+
+        <Section title='Усилия в узле'>
+          <Row label='N, тс'>
+            <Input
+              inputMode='decimal'
+              placeholder='Введите'
+              value={form.forces.N}
+              onChange={e => updateNested('forces', 'N', e.target.value)}
+            />
+          </Row>
+          <Row label='M, тс·м'>
+            <Input
+              inputMode='decimal'
+              placeholder='Введите'
+              value={form.forces.M}
+              onChange={e => updateNested('forces', 'M', e.target.value)}
+            />
+          </Row>
+          <Row label='Q, тс'>
+            <Input
+              inputMode='decimal'
+              placeholder='Введите'
+              value={form.forces.Q}
+              onChange={e => updateNested('forces', 'Q', e.target.value)}
+            />
+          </Row>
+          <Row label='ku'>
+            <Input
+              inputMode='decimal'
+              placeholder='Введите'
+              value={form.utilizationFactor}
+              onChange={e => update('utilizationFactor', e.target.value)}
+            />
+          </Row>
+          <p className='sidebar__formula'>
+            N<sub>b</sub>
+            <sup>max</sup> ={' '}
+            {calculationResult
+              ? `${formatNumber(calculationResult.maxBoltForce.value, 2)} тс`
+              : '—'}
+          </p>
+        </Section>
+
+        <Section title='Параметры фасонного элемента'>
+          <Row label='h, мм'>
+            <Input
+              inputMode='decimal'
+              placeholder='Введите'
+              value={form.plateHeight}
+              onChange={e => update('plateHeight', e.target.value)}
+            />
+          </Row>
+        </Section>
+
+        <Section title='Импорт данных'>
+          <div className='sidebar__import'>
+            <label className='sidebar__upload'>
+              <input
+                type='file'
+                accept='.csv'
+                onChange={handleFileUpload}
+                className='sidebar__upload-input'
+              />
+              <svg width='20' height='20' viewBox='0 0 20 20' aria-hidden>
+                <path d='M10 13V4M6 8l4-4 4 4M4 13v2a1 1 0 001 1h10a1 1 0 001-1v-2' />
+              </svg>
+              Загрузить CSV
+            </label>
+            {importMessage && (
+              <span
+                className={classNames('sidebar__import-message', {
+                  'sidebar__import-message--error': importMessage.isError,
+                })}
+              >
+                {importMessage.text}
+              </span>
+            )}
+          </div>
+        </Section>
       </div>
+
+      <footer className='sidebar__footer'>
+        {calculationResult ? (
+          <>
+            <Button
+              variant='secondary'
+              onClick={handleReset}
+              disabled={isCalculating}
+            >
+              Сбросить
+            </Button>
+            <Button
+              onClick={() => runCalculation(formToInput(form))}
+              disabled={isCalculating}
+            >
+              {isCalculating ? 'Расчет...' : 'Пересчитать'}
+            </Button>
+          </>
+        ) : (
+          <Button
+            onClick={() => runCalculation(formToInput(form))}
+            disabled={isCalculating}
+          >
+            {isCalculating ? 'Расчет...' : 'Рассчитать'}
+          </Button>
+        )}
+      </footer>
     </div>
   )
 }

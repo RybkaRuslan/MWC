@@ -1,0 +1,30 @@
+@use '../../styles/variables.scss' as *;
+
+.ui-input {
+  width: 100%;
+  height: $control-height;
+  padding: 0 $spacing-md;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background-color: $background;
+  font-size: 14px;
+  line-height: 20px;
+  color: $text-primary;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &::placeholder {
+    color: $placeholder;
+  }
+
+  &:hover {
+    border-color: $border-hover;
+  }
+
+  &:focus {
+    border-color: $accent;
+    box-shadow: 0 0 0 3px $focus-ring;
+  }
+}

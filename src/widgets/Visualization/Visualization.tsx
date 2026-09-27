@@ -1,22 +1,18 @@
-import './Visualization.scss'
 import { noVisualIcon } from '@shared/assets/icons'
+import { EmptyState } from '@shared/ui'
 
 export const Visualization = () => {
   return (
-    <div className='visualization'>
-      <div className='visualization__header'>
-        <h2 className='visualization__title'>Визуализация</h2>
-      </div>
-      <div className='visualization__content'>
-        <div className='visualization__placeholder'>
-          <div className='visualization__icon'>
-            <img src={noVisualIcon} alt='Нет данных' />
-          </div>
-          <p className='visualization__text'>Нет данных</p>
-          <p className='visualization__subtext'>
-            Введите данные, чтобы увидеть визуализацию
-          </p>
-        </div>
+    <div className='visualization panel'>
+      <header className='panel__header'>
+        <h2 className='panel__title'>Визуализация</h2>
+      </header>
+      <div className='panel__body'>
+        <EmptyState
+          icon={noVisualIcon}
+          title='Нет данных'
+          text='Введите данные, чтобы увидеть визуализацию'
+        />
       </div>
     </div>
   )

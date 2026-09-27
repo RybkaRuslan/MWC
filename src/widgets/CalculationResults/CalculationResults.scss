@@ -1,232 +1,150 @@
 @use '../../shared/styles/variables.scss' as *;
-@use 'sass:color';
 
 .calculation-results {
-  background-color: $background;
-  border-radius: $border-radius;
-  box-shadow: $shadow-medium;
-  height: fit-content;
-  min-height: 500px;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-
-  &__header {
-    padding: $spacing-md $spacing-lg;
-    border-bottom: 1px solid $border;
-    background-color: $primary;
-    border-radius: $border-radius $border-radius 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  &__title {
-    color: $background;
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  &__status {
-    font-size: 14px;
-    font-weight: 600;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: $border-radius-small;
-    background-color: rgba(255, 255, 255, 0.1);
-
-    &.success {
-      color: #28a745;
-      background-color: rgba(40, 167, 69, 0.1);
-    }
-
-    &.error {
-      color: #dc3545;
-      background-color: rgba(220, 53, 69, 0.1);
-    }
-  }
-
   &__content {
-    padding: $spacing-lg;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
-    flex: 1;
+    padding: $spacing-lg;
   }
 
-  &__loading {
+  &__block-title {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    flex: 1;
-    color: $text-secondary;
-  }
-
-  &__spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid $border;
-    border-top: 3px solid $primary;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: $spacing-md;
-  }
-
-  &__placeholder {
-    text-align: center;
-    color: $text-muted;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-  &__icon {
-    margin-bottom: $spacing-md;
-
-    img {
-      width: 64px;
-      height: 64px;
-      object-fit: contain;
-      opacity: 0.7;
-    }
-  }
-
-  &__text {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: $spacing-xs;
-    color: $text-secondary;
-  }
-
-  &__subtext {
+    min-height: 32px;
     font-size: 14px;
-    line-height: 1.4;
-  }
-
-  &__section {
-    background-color: $secondary;
-    border-radius: $border-radius-small;
-    overflow: hidden;
-  }
-
-  &__section-title {
-    background-color: $primary;
-    color: $background;
-    padding: $spacing-sm $spacing-md;
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
+    line-height: 16px;
+    color: $text-primary;
   }
 
   &__table {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid $border;
+    font-size: 14px;
+    line-height: 16px;
 
     th,
     td {
-      text-align: left;
-      padding: $spacing-sm $spacing-md;
+      height: 32px;
+      padding: 0 $spacing-xs;
       border-bottom: 1px solid $border;
-    }
-
-    th {
-      background-color: rgba(0, 102, 204, 0.1);
-      font-weight: 600;
+      border-left: 1px solid $border;
+      text-align: center;
+      font-weight: 500;
       color: $text-primary;
+
+      &:first-child {
+        padding: 0 $spacing-sm;
+        border-left: none;
+        text-align: left;
+        font-weight: 400;
+        color: $text-secondary;
+      }
+
+      &:not(:first-child) {
+        width: 100px;
+      }
     }
 
-    tbody tr:hover {
-      background-color: rgba(0, 102, 204, 0.05);
+    th,
+    th:first-child {
+      padding: 0 $spacing-xs;
+      background-color: $table-head-background;
+      font-weight: 400;
+      color: $text-primary;
     }
 
     tbody tr:last-child td {
       border-bottom: none;
     }
+
+    tbody tr:hover td:not([class]) {
+      background-color: $row-hover-background;
+    }
   }
 
-  &__summary {
-    background-color: $secondary;
-    padding: $spacing-md;
-    border-radius: $border-radius-small;
-    border-left: 4px solid $primary;
+  &__cell {
+    &--success {
+      background-color: $success-background;
+    }
+
+    &--error {
+      background-color: $error-background;
+    }
   }
 
-  &__summary-title {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: $spacing-sm;
-    color: $text-primary;
+  &__params {
+    display: flex;
+    flex-direction: column;
   }
 
-  &__max-force {
-    font-size: 18px;
-    font-weight: 700;
-    color: $primary;
-    margin: $spacing-xs 0;
-  }
-
-  &__coordinates {
+  &__param {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-lg;
+    min-height: 32px;
     font-size: 14px;
+    line-height: 16px;
+
+    dt {
+      color: $text-secondary;
+    }
+
+    dd {
+      font-weight: 500;
+      color: $text-primary;
+      text-align: right;
+      white-space: nowrap;
+    }
+  }
+
+  &__notice {
+    padding: $spacing-sm $spacing-lg $spacing-md;
+    border-radius: $radius-md;
+    background-color: $warning-background;
+    color: $warning-text;
+
+    .calculation-results__block-title {
+      color: inherit;
+    }
+
+    ul {
+      padding-left: $spacing-xl;
+    }
+
+    li + li {
+      margin-top: $spacing-xs;
+    }
+  }
+
+  &__loading {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-md;
     color: $text-secondary;
-    margin: $spacing-xs 0;
   }
 
-  &__recommendations {
-    background-color: #fff3cd;
-    border: 1px solid #ffeaa7;
-    border-radius: $border-radius-small;
-    padding: $spacing-md;
-  }
-
-  &__recommendations-title {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: $spacing-sm;
-    color: #856404;
-  }
-
-  &__recommendations-list {
-    margin: 0;
-    padding-left: $spacing-lg;
-
-    li {
-      margin-bottom: $spacing-xs;
-      color: #856404;
-      font-size: 14px;
-    }
-  }
-
-  // Кастомный скроллбар
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: $secondary;
-    border-radius: 3px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: $border;
-    border-radius: 3px;
-
-    &:hover {
-      background: color.adjust($border, $lightness: -20%);
-    }
+  &__spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid $divider;
+    border-top-color: $accent;
+    border-radius: 50%;
+    animation: calculation-results-spin 0.8s linear infinite;
   }
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
+@keyframes calculation-results-spin {
+  to {
     transform: rotate(360deg);
   }
 }

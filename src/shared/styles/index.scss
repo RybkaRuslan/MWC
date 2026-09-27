@@ -7,19 +7,17 @@
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
-    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: $font-family;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: $background;
   color: $text-primary;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 20px;
 }
 
 #root {
-  min-height: 100vh;
+  height: 100vh;
 }
 
 button {
@@ -34,18 +32,59 @@ select,
 textarea {
   font-family: inherit;
   font-size: inherit;
-  border: 1px solid $border;
-  border-radius: $border-radius-small;
-  padding: $spacing-sm;
-  outline: none;
+  color: inherit;
+}
 
-  &:focus {
-    border-color: $primary;
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-lg;
+    flex-shrink: 0;
+    height: $header-height;
+    padding: 0 $spacing-lg;
+    border-bottom: 1px solid $divider;
+  }
+
+  &__title {
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 32px;
+    color: $title;
+  }
+
+  &__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
 }
 
-.container {
-  max-width: $container-max-width;
-  margin: 0 auto;
-  padding: 0 $spacing-md;
+.scrollable {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: $border transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $border;
+    border-radius: 3px;
+
+    &:hover {
+      background: $border-hover;
+    }
+  }
 }

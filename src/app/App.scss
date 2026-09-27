@@ -1,49 +1,28 @@
 @use '../shared/styles/variables.scss' as *;
 
 .app {
-  min-height: 100vh;
   display: flex;
-  flex-direction: column;
-  background-color: $secondary;
+  height: 100vh;
+  min-width: 1200px;
+  overflow: hidden;
+  background-color: $background;
 
-  &__header {
-    background-color: $background;
-    padding: $spacing-md $spacing-lg;
-    border-bottom: 1px solid $border;
-    box-shadow: $shadow-light;
+  &__sidebar {
+    flex: 0 0 26%;
+    min-width: 400px;
+    max-width: 500px;
+    border-right: 1px solid $divider;
   }
 
-  &__logo {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
+  &__results {
+    flex: 0 0 31.25%;
+    min-width: 440px;
+    max-width: 600px;
+    border-right: 1px solid $divider;
   }
 
-  &__logo-text {
-    font-size: 24px;
-    font-weight: 700;
-    color: $primary;
-  }
-
-  &__logo-image {
-    height: 40px;
-    width: auto;
-    object-fit: contain;
-  }
-
-  &__subtitle {
-    font-size: 16px;
-    color: $text-secondary;
-  }
-
-  &__content {
-    flex: 1;
-    display: grid;
-    grid-template-columns: $sidebar-width 1fr 1fr;
-    grid-template-rows: 1fr;
-    gap: $spacing-md;
-    padding: $spacing-md;
-    min-height: calc(100vh - 80px); // высота без header
-    align-items: stretch;
+  &__visualization {
+    flex: 1 1 0;
+    min-width: 0;
   }
 }

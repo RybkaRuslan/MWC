@@ -1,0 +1,39 @@
+@use '../../styles/variables.scss' as *;
+
+.ui-select {
+  width: 100%;
+  height: $control-height;
+  padding: 0 36px 0 $spacing-md;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background-color: $background;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4.5l4 4 4-4' fill='none' stroke='%23214B78' stroke-opacity='0.6' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right $spacing-md center;
+  font-size: 14px;
+  line-height: 20px;
+  color: $text-primary;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &--empty {
+    color: $placeholder;
+  }
+
+  option {
+    color: $text-primary;
+  }
+
+  &:hover {
+    border-color: $border-hover;
+  }
+
+  &:focus {
+    border-color: $accent;
+    box-shadow: 0 0 0 3px $focus-ring;
+  }
+}

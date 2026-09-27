@@ -1,248 +1,191 @@
+import classNames from 'classnames'
 import './CalculationResults.scss'
 import { useCalculation } from '@shared/context/CalculationContext'
+import {
+  BEARING_STRENGTH,
+  BOLT_CROSS_SECTION_AREAS,
+  CapacityCheck,
+  CONNECTION_TYPES,
+  SAFETY_FACTORS,
+} from '@shared/lib/calculations'
+import { formatNumber } from '@shared/lib/format'
 import { noDataIcon } from '@shared/assets/icons'
+import { EmptyState } from '@shared/ui'
+
+interface CheckRow {
+  label: string
+  check?: CapacityCheck
+}
+
+interface ParamRow {
+  label: string
+  value: string | number
+}
+
+const CheckTable = ({ title, rows }: { title: string; rows: CheckRow[] }) => (
+  <div className='calculation-results__block'>
+    <h3 className='calculation-results__block-title'>{title}</h3>
+    <table className='calculation-results__table'>
+      <thead>
+        <tr>
+          <th>Критерии</th>
+          <th>тс</th>
+          <th>Ku</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ label, check }) => (
+          <tr key={label}>
+            <td>{label}</td>
+            <td>{check ? formatNumber(check.capacity) : '—'}</td>
+            <td
+              className={classNames({
+                'calculation-results__cell--success': check?.isAcceptable,
+                'calculation-results__cell--error':
+                  check && !check.isAcceptable,
+              })}
+            >
+              {check ? formatNumber(check.utilization) : '—'}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)
+
+const ParamList = ({ title, rows }: { title: string; rows: ParamRow[] }) => (
+  <div className='calculation-results__block'>
+    <h3 className='calculation-results__block-title'>{title}</h3>
+    <dl className='calculation-results__params'>
+      {rows.map(({ label, value }) => (
+        <div className='calculation-results__param' key={label}>
+          <dt>{label}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+)
 
 export const CalculationResults = () => {
   const { calculationResult, isCalculating } = useCalculation()
 
-  if (isCalculating) {
+  const renderBody = () => {
+    if (isCalculating) {
+      return (
+        <div className='calculation-results__loading'>
+          <div className='calculation-results__spinner' />
+          <p>Выполняется расчет...</p>
+        </div>
+      )
+    }
+
+    if (!calculationResult) {
+      return (
+        <EmptyState
+          icon={noDataIcon}
+          title='Нет данных'
+          text='Введите данные, чтобы получить результаты расчета'
+        />
+      )
+    }
+
+    const { input, capacityChecks, summary } = calculationResult
+    const findCheck = (type: CapacityCheck['type']) =>
+      capacityChecks.find(check => check.type === type)
+    const { bolt, profile, plate } = input
+    const boltName = `М${bolt.diameter}, класс ${bolt.strengthClass.class}`
+
     return (
-      <div className='calculation-results'>
-        <div className='calculation-results__header'>
-          <h2 className='calculation-results__title'>Результаты расчета</h2>
-        </div>
-        <div className='calculation-results__content'>
-          <div className='calculation-results__loading'>
-            <div className='calculation-results__spinner'></div>
-            <p>Выполняется расчет...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!calculationResult) {
-    return (
-      <div className='calculation-results'>
-        <div className='calculation-results__header'>
-          <h2 className='calculation-results__title'>Результаты расчета</h2>
-        </div>
-        <div className='calculation-results__content'>
-          <div className='calculation-results__placeholder'>
-            <div className='calculation-results__icon'>
-              <img src={noDataIcon} alt='Нет данных' />
-            </div>
-            <p className='calculation-results__text'>Нет данных</p>
-            <p className='calculation-results__subtext'>
-              Введите данные, чтобы получить результы расчета
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const { capacityChecks, maxBoltForce, summary } = calculationResult
-
-  // Найдем проверки по типам
-  const shearCheck = capacityChecks.find(check => check.type === 'shear')
-  const bearingProfileCheck = capacityChecks.find(
-    check => check.type === 'bearing-profile',
-  )
-  const bearingPlateCheck = capacityChecks.find(
-    check => check.type === 'bearing-plate',
-  )
-
-  return (
-    <div className='calculation-results'>
-      <div className='calculation-results__header'>
-        <h2 className='calculation-results__title'>Результаты расчета</h2>
-        <div
-          className={`calculation-results__status ${summary.isAcceptable ? 'success' : 'error'}`}
-        >
-          {summary.isAcceptable
-            ? '✓ Соединение прочное'
-            : '⚠ Требуется коррекция'}
-        </div>
-      </div>
-
-      <div className='calculation-results__content'>
-        {/* Предельное усилие на смятие */}
-        <div className='calculation-results__section'>
-          <h3 className='calculation-results__section-title'>
-            Предельное усилие на смятие
-          </h3>
-          <table className='calculation-results__table'>
-            <thead>
-              <tr>
-                <th>Критерий</th>
-                <th>[Nbp], тс</th>
-                <th>Ки</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Для профиля</td>
-                <td>{bearingProfileCheck?.capacity.toFixed(3) || '-'}</td>
-                <td>{bearingProfileCheck?.utilization.toFixed(3) || '-'}</td>
-              </tr>
-              <tr>
-                <td>Для фасонки</td>
-                <td>{bearingPlateCheck?.capacity.toFixed(3) || '-'}</td>
-                <td>{bearingPlateCheck?.utilization.toFixed(3) || '-'}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Предельное усилие на срез */}
-        <div className='calculation-results__section'>
-          <h3 className='calculation-results__section-title'>
-            Предельное усилие на срез
-          </h3>
-          <table className='calculation-results__table'>
-            <thead>
-              <tr>
-                <th>Критерий</th>
-                <th>[Nbs], тс</th>
-                <th>Ки</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  Для болта М{calculationResult.input.bolt.diameter}.
-                  {calculationResult.input.bolt.strengthClass.class}
-                </td>
-                <td>{shearCheck?.capacity.toFixed(3) || '-'}</td>
-                <td>{shearCheck?.utilization.toFixed(3) || '-'}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Расчетное сопротивление */}
-        <div className='calculation-results__section'>
-          <h3 className='calculation-results__section-title'>
-            Расчетное сопротивление Rbp смятию элементов
-          </h3>
-          <table className='calculation-results__table'>
-            <thead>
-              <tr>
-                <th>Материал</th>
-                <th>Rbp, Н/мм²</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  для стали {calculationResult.input.profile.material.type}
-                </td>
-                <td>{calculationResult.input.profile.material.strength}</td>
-              </tr>
-              <tr>
-                <td>для стали {calculationResult.input.plate.material.type}</td>
-                <td>{calculationResult.input.plate.material.strength}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Расчетное сопротивление срезу */}
-        <div className='calculation-results__section'>
-          <h3 className='calculation-results__section-title'>
-            Расчетное сопротивление Rbs срезу болтов
-          </h3>
-          <table className='calculation-results__table'>
-            <thead>
-              <tr>
-                <th>Параметр</th>
-                <th>Значение</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  для класса прочности{' '}
-                  {calculationResult.input.bolt.strengthClass.class}, Н/мм²
-                </td>
-                <td>
-                  {calculationResult.input.bolt.strengthClass.shearStrength}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Прочие параметры */}
-        <div className='calculation-results__section'>
-          <h3 className='calculation-results__section-title'>
-            Прочие параметры
-          </h3>
-          <table className='calculation-results__table'>
-            <thead>
-              <tr>
-                <th>Параметр</th>
-                <th>Значение</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Площадь сечения болта Abn, см²</td>
-                <td>1.57</td>
-              </tr>
-              <tr>
-                <td>Коэффициент условия работы γс</td>
-                <td>0.9</td>
-              </tr>
-              <tr>
-                <td>Коэффициент условия работы γb</td>
-                <td>0.9</td>
-              </tr>
-              <tr>
-                <td>Число расчетных срезов одного болта</td>
-                <td>2</td>
-              </tr>
-              <tr>
-                <td>Количество фасонок</td>
-                <td>1</td>
-              </tr>
-              <tr>
-                <td>Количество соединяемых профилей</td>
-                <td>2</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Максимальное усилие в болте */}
-        <div className='calculation-results__summary'>
-          <h3 className='calculation-results__summary-title'>
-            Максимальное усилие в болте
-          </h3>
-          <p className='calculation-results__max-force'>
-            Nmax = {maxBoltForce.value.toFixed(3)} тс
-          </p>
-          <p className='calculation-results__coordinates'>
-            Координаты: X = {maxBoltForce.coordinates.x}мм, Y ={' '}
-            {maxBoltForce.coordinates.y}мм
-          </p>
-        </div>
-
-        {/* Рекомендации */}
-        {summary.recommendations && (
-          <div className='calculation-results__recommendations'>
-            <h3 className='calculation-results__recommendations-title'>
-              Рекомендации
-            </h3>
-            <ul className='calculation-results__recommendations-list'>
-              {summary.recommendations.map((recommendation, index) => (
-                <li key={index}>{recommendation}</li>
+      <div className='calculation-results__content scrollable'>
+        <CheckTable
+          title='Предельное усилие на смятие'
+          rows={[
+            {
+              label: 'Для профиля, [Nbp]',
+              check: findCheck('bearing-profile'),
+            },
+            { label: 'Для фасонки, [Nbp]', check: findCheck('bearing-plate') },
+          ]}
+        />
+        <CheckTable
+          title='Предельное усилие на срез'
+          rows={[
+            {
+              label: `Для болта ${boltName}, [Nbs]`,
+              check: findCheck('shear'),
+            },
+          ]}
+        />
+        <ParamList
+          title='Расчетное сопротивление Rbp смятию элементов'
+          rows={[
+            {
+              label: `Для стали ${profile.material.type}, Н/мм²`,
+              value: BEARING_STRENGTH[profile.material.type] ?? '—',
+            },
+            {
+              label: `Для стали ${plate.material.type}, Н/мм²`,
+              value: BEARING_STRENGTH[plate.material.type] ?? '—',
+            },
+          ]}
+        />
+        <ParamList
+          title='Расчетное сопротивление Rbs срезу болтов'
+          rows={[
+            {
+              label: `Для класса прочности ${bolt.strengthClass.class}, Н/мм²`,
+              value: bolt.strengthClass.shearStrength,
+            },
+          ]}
+        />
+        <ParamList
+          title='Прочие параметры'
+          rows={[
+            {
+              label: 'Площадь сечения болта Abn, см²',
+              value: formatNumber(
+                BOLT_CROSS_SECTION_AREAS[bolt.diameter] ?? 0,
+                2,
+              ),
+            },
+            {
+              label: 'Коэффициент условия работы γc',
+              value: formatNumber(SAFETY_FACTORS.gammaC, 1),
+            },
+            {
+              label: 'Коэффициент условия работы γb',
+              value: formatNumber(SAFETY_FACTORS.gammaB, 1),
+            },
+            {
+              label: 'Число расчетных срезов одного болта',
+              value: CONNECTION_TYPES[input.connectionType].shearPlanes,
+            },
+            { label: 'Количество фасонок', value: 1 },
+            { label: 'Количество соединяемых профилей', value: 2 },
+          ]}
+        />
+        {!summary.isAcceptable && summary.recommendations?.length ? (
+          <div className='calculation-results__notice'>
+            <h3 className='calculation-results__block-title'>Рекомендации</h3>
+            <ul>
+              {summary.recommendations.map(recommendation => (
+                <li key={recommendation}>{recommendation}</li>
               ))}
             </ul>
           </div>
-        )}
+        ) : null}
       </div>
+    )
+  }
+
+  return (
+    <div className='calculation-results panel'>
+      <header className='panel__header'>
+        <h2 className='panel__title'>Результаты расчета</h2>
+      </header>
+      <div className='panel__body'>{renderBody()}</div>
     </div>
   )
 }
