@@ -15,14 +15,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "classnames": "^2.5.1",
+    "playwright": "^1.63.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "classnames": "^2.5.1"
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/node": "^20.14.8",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
+    "@types/three": "^0.186.0",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.2.0",
     "@vitejs/plugin-react": "^4.2.1",
@@ -45,5 +48,21 @@
     "*.{js,jsx,json,css,scss,md}": [
       "prettier --write"
     ]
-  }
+  },
+  "description": "MVP приложение-калькулятор для расчета строительных конструкций с современным интерфейсом.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RybkaRuslan/MWC.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RybkaRuslan/MWC/issues"
+  },
+  "homepage": "https://github.com/RybkaRuslan/MWC#readme"
 }
